@@ -1,0 +1,9 @@
+streamlit
+langdetect
+requests
+python-dotenv
+google-generativeai
+google-genai
+pydantic
+dropbox
+xmltodict

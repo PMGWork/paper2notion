@@ -1,99 +1,52 @@
 # Paper2Notion
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://paper2notion.streamlit.app/)
+## 概要
+PDF論文ファイルをアップロードするだけで、AI（Gemini）によるメタデータ抽出・CrossrefによるDOI検索・Notion連携まで自動化するアプリです。
 
-論文PDFを解析してメタデータを抽出し、Notionデータベースに保存するツールです。論文の内容を自動的に要約し、体系的に管理するのに役立ちます。
-
-## 特徴
-
-- DOIからメタデータを自動取得（タイトル、著者、ジャーナル、発表年など）
-- PDFから不足情報をGemini AIで抽出
-- 英語のアブストラクトを日本語に自動翻訳
-- 論文の内容を「背景」「目的」「実装・実験方法」「結果」「結論」「議論」の項目で自動要約
-- NotionデータベースにPDFへのリンク付きで整理して保存
-- DropboxにPDFをアップロードしてNotion内でリンク可能
+- PDFからGeminiでタイトル・著者・要旨などを自動抽出
+- Crossref APIでタイトル検索し、類似度が高い場合のみDOIを自動取得
+- DOIが採用された場合はCrossrefの正式メタデータで上書き
+- 英語/日本語の自動判定＆英語論文のみアブストラクト自動翻訳
+- Dropbox経由でPDFをアップロードし、Notionに論文情報を送信
+- UI上で自動判定結果やDOI採用/不採用、タイトル類似度も確認可能
 
 ## 使い方
 
-1. DOIを入力（任意）
-2. 論文PDFをアップロード（必須）
-3. 「Notionに送信」ボタンをクリック
-4. 処理完了後、Notionデータベースに情報が保存されます
+1. 必要なPythonパッケージをインストール
+    ```
+    pip install -r requirements.txt
+    ```
 
-## セットアップ
+2. `.env`にGemini APIキーなどを設定
 
-### 必要なAPI
+3. Streamlitアプリを起動
+    ```
+    streamlit run main.py
+    ```
 
-- **Gemini API**: PDFの解析と要約・翻訳に使用
-- **Notion API**: データベースへの保存に使用
-- **Dropbox API**: PDFの保存に使用（任意）
+4. ブラウザでアプリにアクセスし、PDFファイルをアップロード
 
-### インストール
+5. 必要に応じてDropbox認証を行う
 
-```bash
-# リポジトリをクローン
-git clone https://github.com/yourusername/paper2notion.git
-cd paper2notion
+6. 「Notionに送信」ボタンを押すと、以下の流れで処理されます
+    - GeminiでPDFからメタデータ抽出
+    - Crossrefでタイトル検索し、タイトル類似度0.8以上の場合のみDOIを採用
+    - DOIが採用された場合はCrossrefメタデータで上書き
+    - 英語論文の場合はアブストラクトを日本語に自動翻訳
+    - DropboxにPDFをアップロードし、Notionに論文情報を送信
 
-# 依存関係をインストール
-pip install -r requirements.txt
-```
+## 注意点・仕様
 
-### 環境変数の設定
+- CrossrefでDOIが見つかっても、タイトル類似度が低い場合はDOIを採用しません
+- DOIが採用されなかった場合はGemini抽出メタデータのみで処理します
+- 英語/日本語の自動判定はlangdetectを利用
+- .envやキャッシュファイルは.gitignoreで管理
+- 詳細なログや判定結果はUI上に表示されます
 
-プロジェクトディレクトリに `.env` ファイルを作成し、以下の内容を設定してください：
+## 開発・カスタマイズ
 
-```
-GEMINI_API_KEY=your_gemini_api_key
-NOTION_API_KEY=your_notion_api_key
-NOTION_DATABASE_ID=your_notion_database_id
-DROPBOX_ACCESS_TOKEN=your_dropbox_access_token
-```
-
-### Notionデータベースの準備
-
-以下のプロパティを持つデータベースを作成してください：
-
-| プロパティ名 | タイプ | 説明 |
-|------------|-------|------|
-| タイトル | title | 論文のタイトル |
-| 著者 | multi_select | 論文の著者（複数可） |
-| 発表年 | number | 論文の発表年 |
-| ジャーナル | multi_select | 掲載ジャーナル（複数可） |
-| DOI | url | 論文のDOI URL |
-| アブスト | rich_text | 論文のアブストラクト |
-| PDF | files | アップロードしたPDFへのリンク |
-
-## 実行方法
-
-```bash
-streamlit run main.py
-```
-
-ブラウザが開き、アプリケーションが表示されます。
-
-## 論文の自動要約
-
-Gemini AIを使用して以下の項目に分けて要約します：
-
-- **背景**: 研究の背景や既存研究の課題
-- **目的**: 研究の目的や解決しようとしている問題
-- **実装・実験方法（提案）**: 提案手法や実験の詳細
-- **結果**: 実験結果や評価
-- **結論**: 研究から得られた結論
-- **議論**: 結果の考察や今後の課題
-
-## 技術スタック
-
-- **Streamlit**: Web UIの構築
-- **Google Gemini AI**: PDF解析と要約・翻訳
-- **Notion API**: データベース連携
-- **Dropbox API**: PDFファイル保存
+- タイトル類似度のしきい値や判定ロジックは`utils/metadata.py`・`main.py`で調整可能
+- Notion連携やDropbox連携の詳細は`utils/notion.py`・`utils/dropbox.py`を参照
 
 ## ライセンス
-
 MIT
-
-## 謝辞
-
-本アプリはGemini API、Notion API、Dropbox APIを使用しています。

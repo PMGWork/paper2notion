@@ -1,1 +1,26 @@
 .env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+.DS_Store
+.idea/
+.vscode/
+*.log
+*.bak
+*.swp
+.cache/
+dist/
+build/
+.eggs/
+*.egg-info/
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+# Jupyter/IPython
+.ipynb_checkpoints/
+# VSCode
+.history/
