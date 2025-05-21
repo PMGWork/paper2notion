@@ -2,7 +2,7 @@ import requests
 from config import NOTION_API_KEY, NOTION_DATABASE_ID
 
 def send_to_notion(meta, summary, pdf_bytes=None, pdf_name=None):
-    """NotionにPaperページを作成（PDFを直接アップロード）"""
+    # NotionにPaperページを作成（PDFを直接アップロード）
     if not NOTION_API_KEY or not NOTION_DATABASE_ID:
         return False, "Notion APIキーまたはデータベースIDが設定されていません"
 

@@ -3,11 +3,11 @@ import xml.etree.ElementTree as ET
 from difflib import SequenceMatcher
 
 def is_similar(a, b, threshold=0.8):
-    """2つの文字列の類似度がthreshold以上ならTrue"""
+    # 2つの文字列の類似度がthreshold以上ならTrue
     return SequenceMatcher(None, a, b).ratio() >= threshold
 
 def search_doi_by_title(title):
-    """Crossrefでタイトル検索し、最も一致度の高いDOIを返す"""
+    # Crossrefでタイトル検索し、最も一致度の高いDOIを返す
     url = "https://api.crossref.org/works"
     params = {
         "query.title": title,
@@ -23,7 +23,7 @@ def search_doi_by_title(title):
     return items[0].get("DOI")
 
 def get_metadata_from_doi(doi):
-    """DOIから論文のメタデータを取得する関数"""
+    # DOIから論文のメタデータを取得する関数
     # arXiv IDの場合
     if doi.lower().startswith("arxiv:"):
         return _get_arxiv_metadata(doi)
@@ -31,7 +31,7 @@ def get_metadata_from_doi(doi):
     return _get_crossref_metadata(doi)
 
 def _get_arxiv_metadata(arxiv_doi):
-    """arXivからメタデータを取得"""
+    # arXivからメタデータを取得
     arxiv_id = arxiv_doi.split(":")[1]
     url = f"http://export.arxiv.org/api/query?id_list={arxiv_id}"
     resp = requests.get(url)
@@ -60,7 +60,7 @@ def _get_arxiv_metadata(arxiv_doi):
     }
 
 def _get_crossref_metadata(doi):
-    """CrossRefからメタデータを取得"""
+    # CrossRefからメタデータを取得
     url = f"https://api.crossref.org/works/{doi}"
     resp = requests.get(url)
     if resp.status_code != 200:
