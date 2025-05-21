@@ -7,7 +7,7 @@ from config import GEMINI_API_KEY
 # Geminiにプロンプトを送信する関数
 def send_prompt(pdf_path, prompt, schema=None):
     client = genai.Client(api_key=GEMINI_API_KEY)
-    use_model = "gemini-2.5-flash-preview-04-17"
+    use_model = "gemini-2.5-flash-preview-05-20"
     if pdf_path.exists():
         kwargs = dict(
             model=use_model,

@@ -1,52 +1,110 @@
 # Paper2Notion
 
 ## 概要
-PDF論文ファイルをアップロードするだけで、AI（Gemini）によるメタデータ抽出・CrossrefによるDOI検索・Notion連携まで自動化するアプリです。
 
-- PDFからGeminiでタイトル・著者・要旨などを自動抽出
-- Crossref APIでタイトル検索し、類似度が高い場合のみDOIを自動取得
-- DOIが採用された場合はCrossrefの正式メタデータで上書き
-- 英語/日本語の自動判定＆英語論文のみアブストラクト自動翻訳
-- Dropbox経由でPDFをアップロードし、Notionに論文情報を送信
-- UI上で自動判定結果やDOI採用/不採用、タイトル類似度も確認可能
+`Paper2Notion` は、PDF形式の論文ファイルをアップロードするだけで、AIによるメタデータ抽出、Crossrefを利用したDOI検索、そしてNotionデータベースへの情報登録までを自動化するStreamlitアプリケーションです。
 
-## 使い方
+主な機能：
 
-1. 必要なPythonパッケージをインストール
+-   **メタデータ自動抽出**: アップロードされたPDFから、GoogleのGeminiモデルを利用して論文のタイトル、著者、抄録、発行年、ジャーナル名を抽出します。
+-   **DOI自動検索と検証**: 抽出されたタイトルを基にCrossref APIを検索し、関連するDOIを特定します。タイトルの類似度があらかじめ設定された閾値（デフォルト0.8）以上の場合にのみ、そのDOIを採用します。
+-   **Crossrefメタデータによる補完**: DOIが採用された場合、Crossrefから取得した正式なメタデータで既存情報を上書き・補完します。ただし、Crossrefの抄録が空の場合は、Geminiが抽出した抄録を維持します。
+-   **多言語対応と自動翻訳**: 論文の言語（英語または日本語）を自動で判定します。英語の論文の場合、抄録を自動的に日本語へ翻訳します。
+-   **全文要約**: Geminiモデルを利用し、論文全体の背景、目的、提案手法、結果、結論、議論を構造化して要約します。
+-   **Notion連携**: 抽出・整形された全ての論文情報を、指定されたNotionデータベースへ自動で送信・登録します。
+-   **進捗表示と結果確認**: UI上で、メタデータ抽出、DOI検索、翻訳、Notion送信などの処理状況や、DOIの採用/不採用、タイトルの類似度などをリアルタイムで確認できます。
+
+## セットアップ
+
+### 前提条件
+
+-   Python 3.8以上
+-   Gemini APIキー
+
+### インストール
+
+1.  **リポジトリをクローンします（まだの場合）：**
+    ```bash
+    git clone https://github.com/your-username/paper2notion-python.git
+    cd paper2notion-python
     ```
+
+2.  **必要なPythonパッケージをインストールします：**
+    ```bash
     pip install -r requirements.txt
     ```
 
-2. `.env`にGemini APIキーなどを設定
-
-3. Streamlitアプリを起動
+3.  **環境変数を設定します：**
+    プロジェクトルートに `.env` ファイルを作成し、以下の情報を記述します。
+    ```env
+    GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
+    NOTION_API_KEY="YOUR_NOTION_API_KEY"
+    NOTION_DATABASE_ID="YOUR_NOTION_DATABASE_ID"
     ```
+    -   `GEMINI_API_KEY`: [Google AI Studio](https://aistudio.google.com/app/apikey) で取得したAPIキー。
+    -   `NOTION_API_KEY`: NotionのインテグレーションAPIキー。
+    -   `NOTION_DATABASE_ID`: 論文情報を保存するNotionデータベースのID。
+
+    `.env` ファイルは `.gitignore` によってリポジトリには含まれません。
+
+## 使い方
+
+1.  **Streamlitアプリケーションを起動します：**
+    ```bash
     streamlit run main.py
     ```
 
-4. ブラウザでアプリにアクセスし、PDFファイルをアップロード
+2.  **ブラウザでアプリにアクセスします：**
+    ターミナルに表示されたURL（通常は `http://localhost:8501`）を開きます。
 
-5. 必要に応じてDropbox認証を行う
+3.  **PDFファイルをアップロードします：**
+    「論文PDF」セクションのファイルアップローダーを使って、解析したい論文のPDFファイルを選択します。
 
-6. 「Notionに送信」ボタンを押すと、以下の流れで処理されます
-    - GeminiでPDFからメタデータ抽出
-    - Crossrefでタイトル検索し、タイトル類似度0.8以上の場合のみDOIを採用
-    - DOIが採用された場合はCrossrefメタデータで上書き
-    - 英語論文の場合はアブストラクトを日本語に自動翻訳
-    - DropboxにPDFをアップロードし、Notionに論文情報を送信
+4.  **「Notionに送信」ボタンをクリックします：**
+    クリック後、以下の処理が自動的に実行されます。
+    1.  GeminiによるPDFからのメタデータ抽出。
+    2.  抽出タイトルに基づくCrossrefでのDOI検索。
+    3.  タイトル類似度が閾値（デフォルト0.8）以上の場合、DOIを採用。
+    4.  DOIが採用された場合、Crossrefのメタデータで情報を更新・補完。
+    5.  英語論文の場合、抄録を日本語に自動翻訳。
+    6.  論文全体の構造化要約を作成。
+    7.  全ての情報をNotionデータベースに送信。
 
-## 注意点・仕様
+## 設定とカスタマイズ
 
-- CrossrefでDOIが見つかっても、タイトル類似度が低い場合はDOIを採用しません
-- DOIが採用されなかった場合はGemini抽出メタデータのみで処理します
-- 英語/日本語の自動判定はlangdetectを利用
-- .envやキャッシュファイルは.gitignoreで管理
-- 詳細なログや判定結果はUI上に表示されます
+-   **タイトル類似度の閾値**: DOI採用の判断基準となるタイトルの類似度スコアの閾値は、`main.py`内の `is_similar` 関数の `threshold` 引数で調整可能です。
+-   **Crossref検索ロジック**: `utils/metadata.py` 内の `search_doi_by_title` 関数や `get_metadata_from_doi` 関数で、Crossref APIとの連携方法を調整できます。
+-   **Notion連携**: Notionへのデータ送信ロジックは `utils/notion.py` で定義されています。送信するプロパティやデータベースのマッピングなどを変更できます。
+-   **プロンプト**: Geminiモデルへの指示（プロンプト）は `main.py` 内に記述されています。抽出項目や要約の形式などを変更したい場合は、これらのプロンプトを編集してください。
 
-## 開発・カスタマイズ
+## 注意点と仕様
 
-- タイトル類似度のしきい値や判定ロジックは`utils/metadata.py`・`main.py`で調整可能
-- Notion連携やDropbox連携の詳細は`utils/notion.py`・`utils/dropbox.py`を参照
+-   **DOIの採用基準**: CrossrefでDOIが見つかったとしても、抽出された論文タイトルとの類似度が設定された閾値に満たない場合は、そのDOIは採用されず、Geminiが抽出したメタデータが主として使用されます。
+-   **言語判定**: 論文の言語（英語/日本語）の自動判定には `langdetect` ライブラリを使用しています。
+-   **キャッシュファイル**: Streamlitやその他のライブラリが生成するキャッシュファイルは、`.gitignore` によってバージョン管理から除外されています。
+-   **ログとフィードバック**: 処理の各ステップにおける詳細なログ、エラーメッセージ、判定結果（DOIの採用状況、類似度スコアなど）は、StreamlitアプリケーションのUI上に直接表示されます。
+
+## 開発
+
+### ディレクトリ構成
+
+```
+paper2notion-python/
+├── .streamlit/
+│   └── config.toml        # Streamlit設定ファイル (オプション)
+├── utils/
+│   ├── __init__.py
+│   ├── gemini.py          # Gemini API連携モジュール
+│   ├── metadata.py        # メタデータ処理、Crossref API連携モジュール
+│   ├── models.py          # Pydanticモデル定義 (PaperMeta)
+│   └── notion.py          # Notion API連携モジュール
+├── .env.example           # 環境変数設定ファイルのテンプレート
+├── .gitignore
+├── main.py                # Streamlitアプリケーションのメインスクリプト
+├── README.md
+└── requirements.txt       # Python依存パッケージリスト
+```
 
 ## ライセンス
-MIT
+
+このプロジェクトはMITライセンスの下で公開されています。詳細は `LICENSE` ファイル（もしあれば）を参照してください。

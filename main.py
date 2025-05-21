@@ -11,8 +11,6 @@ from config import GEMINI_API_KEY
 from utils.models import PaperMeta
 from utils.metadata import get_metadata_from_doi, search_doi_by_title, is_similar
 from utils.gemini import send_prompt
-from utils.dropbox import get_auth_url, get_access_token, upload_and_get_shared_link
-from utils.dropbox import save_access_token, load_access_token, delete_access_token
 from utils.notion import send_to_notion
 
 # アプリケーションのメイン部分
@@ -22,85 +20,9 @@ st.write("PDFファイルをアップロードしてください。")
 # セッション状態の初期化
 if "meta" not in st.session_state:
     st.session_state.meta = None
-if "db_access_token" not in st.session_state:
-    # 保存されたトークンを読み込む
-    saved_token = load_access_token()
-    if saved_token:
-        st.session_state.db_access_token = saved_token
-    else:
-        st.session_state.db_access_token = None
 
 # ユーザー入力部分
 pdf_file = st.file_uploader("論文PDF", type=["pdf"], key="pdf")
-
-# Dropbox認証部分（改善版）
-with st.expander("Dropbox認証", expanded=not st.session_state.db_access_token):
-    if not st.session_state.db_access_token:
-        st.info("PDFをNotionに送信するには、Dropboxを経由する必要があります。以下のボタンからDropboxにログインしてください。")
-
-        auth_url = get_auth_url()
-
-        st.markdown(
-            f"""
-            <style>
-            .dropbox-login-btn {{
-                display: inline-flex;
-                -webkit-box-align: center;
-                align-items: center;
-                -webkit-box-pack: center;
-                justify-content: center;
-                font-weight: 400;
-                padding: 0.25rem 0.75rem;
-                border-radius: 0.5rem;
-                min-height: 2.5rem;
-                margin-bottom: 16px;
-                line-height: 1.6;
-                text-decoration: none;
-                width: auto;
-                height: auto;
-                user-select: none;
-                background-color: rgb(19, 23, 32);
-                color: rgb(250, 250, 250);
-                border: 1px solid rgba(250, 250, 250, 0.2);
-                font-size: 1rem;
-                cursor: pointer;
-            }}
-            .dropbox-login-btn:hover {{
-                color: #FF4B4B;
-                border: 1px solid #FF4B4B;
-            }}
-            </style>
-            <a href="{auth_url}" target="_self" style="text-decoration: none;">
-                <button class="dropbox-login-btn">
-                    Dropboxにログイン
-                </button>
-            </a>
-            """,
-            unsafe_allow_html=True
-        )
-
-        # 認証コードを取得
-        query_params = st.query_params
-        if "code" in query_params:
-            with st.spinner("Dropboxと接続中..."):
-                code = query_params["code"]
-                # トークンを取得
-                access_token = get_access_token(code)
-                if access_token:
-                    st.session_state.db_access_token = access_token
-                    # 取得したトークンをファイルに保存
-                    save_access_token(access_token)
-                    st.success("Dropboxとの連携に成功しました")
-                    # URLパラメータをクリアするためにページをリロード
-                    st.rerun()
-    else:
-        st.success("Dropboxと連携済みです")
-
-        if st.button("Dropboxとの連携を解除", key="db_logout", type="secondary"):
-            delete_access_token()
-            st.session_state.db_access_token = None
-            st.success("Dropboxとの連携を解除しました")
-            st.rerun()
 
 if st.button("Notionに送信"):
     meta = {}
@@ -117,7 +39,6 @@ if st.button("Notionに送信"):
             tmp_path = pathlib.Path(tmp.name)
 
         st.success("PDFのアップロードが完了しました")
-        st.info(f"PDFファイル名: {st.session_state.uploaded_pdf_info['name']}")
 
         # Geminiでメタデータを一括抽出
         prompt = (
@@ -223,38 +144,14 @@ if st.button("Notionに送信"):
 
         st.session_state.meta = meta
 
-        # Dropboxにファイルをアップロード
-        pdf_public_url = None
-        if st.session_state.db_access_token:
-            pdf_bytes = st.session_state.uploaded_pdf_info["bytes"]
-            pdf_name = st.session_state.uploaded_pdf_info["name"]
-            dropbox_folder = "Paper2Notion_Uploads"
-
-            with st.spinner(f"'{pdf_name}' をDropboxにアップロード中..."):
-                pdf_public_url = upload_and_get_shared_link(
-                    pdf_bytes,
-                    pdf_name,
-                    dropbox_folder,
-                    st.session_state.db_access_token
-                )
-
-                if pdf_public_url:
-                    st.session_state.pdf_public_url = pdf_public_url
-                    st.success(f"Dropboxへのアップロードが完了しました")
-                    st.info(f"URL: {pdf_public_url}")
-                else:
-                    st.warning("DropboxへのPDFアップロードに失敗しました。")
-        else:
-            st.warning("Dropboxにログインしていないため、PDFをアップロードできません。ページ上部でDropboxにログインしてください。")
-
         # Notionに送信
         if meta:
             summary = st.session_state.get("pdf_summary", "")
-            pdf_public_url = st.session_state.get("pdf_public_url")
-            pdf_name = st.session_state.uploaded_pdf_info["name"] if pdf_public_url else None
+            pdf_bytes = st.session_state.uploaded_pdf_info["bytes"]
+            pdf_name = st.session_state.uploaded_pdf_info["name"]
 
             with st.spinner("Notionに送信中..."):
-                success, message = send_to_notion(meta, summary, pdf_public_url, pdf_name)
+                success, message = send_to_notion(meta, summary, pdf_bytes, pdf_name)
                 if success:
                     st.success(message)
                 else:
